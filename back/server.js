@@ -1,29 +1,29 @@
 import express from "express"
 import cors from "cors"
-
+import dotenv from "dotenv"
 
 import connectDB from "./utils/connectDb.js"
 import authRouter from "./routers/authRouter.js"
 import communityRouter from "./routers/communityRouter.js"
 
+// Load environment variables
+dotenv.config();
+
 const app = express()
 
-
+app.use(cors())
 app.use(express.json())
-app.use(cors({
-  origin: 'http://localhost:5173', // Vite's default port
-  credentials: true
-}))
-
-connectDB()
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
 });
 
+// Routes
 app.use("/api/auth", authRouter)
 app.use("/api/community", communityRouter)
+
+connectDB()
 
 // Error handling middleware
 app.use((err, req, res, next) => {

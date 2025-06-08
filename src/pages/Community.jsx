@@ -1,12 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { MessageCircle, Send, Heart, Search, Loader2, AlertCircle, Users, Trash2, MoreVertical } from 'lucide-react';
+import { MessageCircle, Send, Heart, Search, Loader2, AlertCircle, Users, Trash2, MoreVertical, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 import { communityService } from '../services/communityService.js';
 import { formatTimestamp } from '../utils/helpers.js';
 import Navbar from '../Components/Navbar';
+import { useLanguage } from '../context/LanguageContext';
+import { useTranslation } from '../hooks/useTranslation';
+import { translationService } from '../services/translationService';
 
 export default function Community() {
   const { id: userId } = useParams();
@@ -23,6 +26,50 @@ export default function Community() {
   const observer = useRef();
   const lastPostRef = useRef();
   const [deleteConfirm, setDeleteConfirm] = useState({ postId: null, replyId: null });
+  const { currentLanguage } = useLanguage();
+  const [translating, setTranslating] = useState({});
+  const [translatedContent, setTranslatedContent] = useState({});
+
+  const translations = {
+    title: useTranslation("Community Forum"),
+    subtitle: useTranslation("Share your gardening experiences and get help from other plant enthusiasts"),
+    newPost: {
+      placeholder: useTranslation("Share your gardening experience or ask a question..."),
+      button: useTranslation("Post"),
+      posting: useTranslation("Posting...")
+    },
+    reply: {
+      placeholder: useTranslation("Write your reply..."),
+      button: useTranslation("Reply"),
+      replying: useTranslation("Replying...")
+    },
+    delete: {
+      confirmTitle: useTranslation("Delete Confirmation"),
+      confirmMessage: useTranslation("Are you sure you want to delete this?"),
+      cancel: useTranslation("Cancel"),
+      confirm: useTranslation("Delete"),
+      deleting: useTranslation("Deleting...")
+    },
+    error: {
+      post: useTranslation("Failed to create post. Please try again."),
+      reply: useTranslation("Failed to add reply. Please try again."),
+      delete: useTranslation("Failed to delete. Please try again."),
+      load: useTranslation("Failed to load posts. Please refresh the page.")
+    },
+    empty: {
+      title: useTranslation("No Posts Yet"),
+      message: useTranslation("Be the first to share your gardening experience!")
+    },
+    translate: {
+      button: useTranslation("अनुवाद करें", "Translate", "ಅನುವಾದಿಸಿ"),
+      translating: useTranslation("अनुवाद हो रहा है...", "Translating...", "ಅನುವಾದವಾಗುತ್ತಿದೆ..."),
+      original: useTranslation("मूल दिखाएं", "Show Original", "ಮೂಲ ತೋರಿಸಿ"),
+      error: useTranslation("अनुवाद विफल रहा। कृपया पुनः प्रयास करें।", "Translation failed. Please try again.", "ಅನುವಾದ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.")
+    },
+    search: {
+      placeholder: useTranslation("Search posts...")
+    }
+  };
 
   const particlesInit = useCallback(async (engine) => {
     await loadFull(engine);
@@ -244,6 +291,36 @@ export default function Community() {
     }
   };
 
+  // Function to handle translation
+  const handleTranslate = async (content, type, id) => {
+    if (translating[`${type}-${id}`]) return;
+    
+    try {
+      setTranslating(prev => ({ ...prev, [`${type}-${id}`]: true }));
+      
+      // If already translated, toggle back to original
+      if (translatedContent[`${type}-${id}`]) {
+        setTranslatedContent(prev => {
+          const newState = { ...prev };
+          delete newState[`${type}-${id}`];
+          return newState;
+        });
+      } else {
+        // Translate the content
+        const translated = await translationService.translate(content, currentLanguage);
+        setTranslatedContent(prev => ({
+          ...prev,
+          [`${type}-${id}`]: translated
+        }));
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      setError(translations.translate.error);
+    } finally {
+      setTranslating(prev => ({ ...prev, [`${type}-${id}`]: false }));
+    }
+  };
+
   const displayPosts = searchResults || posts;
 
   return (
@@ -395,8 +472,8 @@ export default function Community() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 text-white rounded-full mb-4 backdrop-blur-sm">
             <Users className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Community Garden</h1>
-          <p className="text-gray-600">Share your gardening journey, ask questions, and connect with fellow plant enthusiasts</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">{translations.title}</h1>
+          <p className="text-gray-600">{translations.subtitle}</p>
         </div>
 
         {/* Search Bar */}
@@ -413,7 +490,7 @@ export default function Community() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search posts..."
+                placeholder={translations.search.placeholder}
                 className="w-full p-3 pl-10 border border-gray-200 rounded-xl bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -480,7 +557,7 @@ export default function Community() {
               type="text"
               value={newPost}
               onChange={(e) => setNewPost(e.target.value)}
-              placeholder="What's on your mind?"
+              placeholder={translations.newPost.placeholder}
               className="flex-1 p-3 border border-gray-200 rounded-xl bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
             <button
@@ -551,7 +628,9 @@ export default function Community() {
                 </div>
 
                 {/* Post Content */}
-                <p className="mb-4 text-gray-700">{post.content}</p>
+                <p className="mb-4 text-gray-700">
+                  {translatedContent[`post-${post._id}`] || post.content}
+                </p>
 
                 {/* Post Actions */}
                 <div className="flex items-center gap-4 mb-4">
@@ -576,6 +655,20 @@ export default function Community() {
                     <MessageCircle size={18} />
                     <span>{post.replies.length}</span>
                   </button>
+                  <button
+                    onClick={() => handleTranslate(post.content, 'post', post._id)}
+                    className="text-green-500 hover:text-green-600 transition-colors flex items-center gap-1"
+                    disabled={translating[`post-${post._id}`]}
+                  >
+                    <Globe className="w-4 h-4" />
+                    {translating[`post-${post._id}`] ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : translatedContent[`post-${post._id}`] ? (
+                      translations.translate.original
+                    ) : (
+                      translations.translate.button
+                    )}
+                  </button>
                 </div>
 
                 {/* Reply Form */}
@@ -599,7 +692,7 @@ export default function Community() {
                             ...prev,
                             [post._id]: e.target.value
                           }))}
-                          placeholder="Write a reply..."
+                          placeholder={translations.reply.placeholder}
                           className="flex-1 p-3 border border-gray-200 rounded-xl bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                         />
                         <button
@@ -647,7 +740,9 @@ export default function Community() {
                             )}
                           </div>
                         </div>
-                        <p className="mb-2 text-gray-700">{reply.content}</p>
+                        <p className="mb-2 text-gray-700">
+                          {translatedContent[`reply-${reply._id}`] || reply.content}
+                        </p>
                         <button
                           onClick={() => handleReplyLike(post._id, reply._id)}
                           className={`flex items-center gap-1 px-2 py-1 rounded-lg transition-colors ${
@@ -658,6 +753,20 @@ export default function Community() {
                         >
                           <Heart size={16} className={reply.likes.includes(userId) ? 'fill-current' : ''} />
                           <span>{reply.likes.length}</span>
+                        </button>
+                        <button
+                          onClick={() => handleTranslate(reply.content, 'reply', reply._id)}
+                          className="text-green-500 hover:text-green-600 transition-colors flex items-center gap-1"
+                          disabled={translating[`reply-${reply._id}`]}
+                        >
+                          <Globe className="w-4 h-4" />
+                          {translating[`reply-${reply._id}`] ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : translatedContent[`reply-${reply._id}`] ? (
+                            translations.translate.original
+                          ) : (
+                            translations.translate.button
+                          )}
                         </button>
                       </motion.div>
                     ))}
@@ -686,14 +795,14 @@ export default function Community() {
                     {deleteConfirm.replyId ? 'Delete Reply' : 'Delete Post'}
                   </h3>
                   <p className="text-gray-600 mb-6">
-                    Are you sure you want to delete this {deleteConfirm.replyId ? 'reply' : 'post'}? This action cannot be undone.
+                    {translations.delete.confirmMessage}
                   </p>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setDeleteConfirm({ postId: null, replyId: null })}
                       className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                      Cancel
+                      {translations.delete.cancel}
                     </button>
                     <button
                       onClick={() => {
@@ -705,7 +814,7 @@ export default function Community() {
                       }}
                       className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                     >
-                      Delete
+                      {translations.delete.confirm}
                     </button>
                   </div>
                 </motion.div>
@@ -727,7 +836,7 @@ export default function Community() {
               animate={{ opacity: 1, y: 0 }}
               className="text-center text-gray-500 py-8 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg"
             >
-              {searchResults ? 'No posts found' : 'No posts yet. Be the first to post!'}
+              {searchResults ? 'No posts found' : translations.empty.message}
             </motion.div>
           )}
         </div>

@@ -6,6 +6,8 @@ import { loadFull } from "tsparticles";
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams } from 'react-router-dom';
+import { useLanguage } from '../context/LanguageContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 const PlantDiseaseUploader = () => {
   const [uploadedImage, setUploadedImage] = useState(null);
@@ -16,8 +18,38 @@ const PlantDiseaseUploader = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const chatEndRef = useRef(null);
+  const { currentLanguage } = useLanguage();
 
-  const {id} = useParams()
+  const {id} = useParams();
+
+  // Translate all text content
+  const translations = {
+    title: useTranslation("Plant Disease Detection"),
+    subtitle: useTranslation("Upload a photo of your plant's leaf to identify diseases and get treatment recommendations"),
+    uploadTitle: useTranslation("Upload Plant Photo"),
+    uploadSubtitle: useTranslation("Drag and drop your image here, or click to browse"),
+    uploadButton: useTranslation("Browse Files"),
+    orText: useTranslation("or"),
+    analyzing: useTranslation("Analyzing your plant..."),
+    diseaseDetected: useTranslation("Disease Detected"),
+    confidence: useTranslation("Confidence"),
+    severity: useTranslation("Severity"),
+    immediateActions: useTranslation("Immediate Actions"),
+    chatTitle: useTranslation("Ask the Plant Expert"),
+    chatPlaceholder: useTranslation("Ask me about plant care, disease prevention, or treatment options..."),
+    quickQuestions: useTranslation("Quick questions:"),
+    questions: {
+      watering: useTranslation("How often should I water my plant?"),
+      fertilizer: useTranslation("What's the best fertilizer to use?"),
+      prevention: useTranslation("How can I prevent this disease?"),
+      pruning: useTranslation("When should I prune affected leaves?")
+    },
+    error: {
+      upload: useTranslation("Failed to upload image. Please try again."),
+      analysis: useTranslation("Failed to analyze image. Please try again."),
+      chat: useTranslation("Failed to send message. Please try again.")
+    }
+  };
 
   const particlesInit = useCallback(async (engine) => {
     await loadFull(engine);
@@ -34,11 +66,12 @@ const PlantDiseaseUploader = () => {
   // Initialize chat with welcome message when analysis is complete
   useEffect(() => {
     if (analysisResult && chatMessages.length === 0) {
+      const welcomeMessage = useTranslation(`Hello! I've analyzed your plant and detected ${analysisResult.disease}. I'm here to help answer any questions you might have about plant care, disease management, or prevention strategies. What would you like to know?`);
       setChatMessages([
         {
           id: 1,
           type: 'bot',
-          message: `Hello! I've analyzed your plant and detected ${analysisResult.disease}. I'm here to help answer any questions you might have about plant care, disease management, or prevention strategies. What would you like to know?`,
+          message: welcomeMessage,
           timestamp: new Date()
         }
       ]);
@@ -333,8 +366,8 @@ const PlantDiseaseUploader = () => {
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-500 text-white rounded-full mb-4 backdrop-blur-sm">
               <Leaf className="w-8 h-8" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Plant Disease Detection</h1>
-            <p className="text-gray-600">Upload a photo of your plant's leaf to identify diseases and get treatment recommendations</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">{translations.title}</h1>
+            <p className="text-gray-600">{translations.subtitle}</p>
           </div>
 
           {!uploadedImage && (
@@ -348,37 +381,28 @@ const PlantDiseaseUploader = () => {
                 }`}
               >
                 <input {...getInputProps()} />
-                
                 <div className="space-y-4">
-                  <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full transition-colors duration-300 ${
-                    isDragActive ? 'bg-green-200 text-green-600 scale-110' : 'bg-green-100 text-green-500'
-                  }`}>
-                    {isDragActive ? (
-                      <Camera className="w-8 h-8 animate-bounce" />
-                    ) : (
-                      <Upload className="w-8 h-8" />
-                    )}
+                  <div className="flex justify-center">
+                    <Upload className="w-12 h-12 text-green-500" />
                   </div>
-                  
-                  <div className="transform transition-all duration-300">
-                    <h3 className={`text-xl font-semibold mb-2 transition-colors duration-300 ${
-                      isDragActive ? 'text-green-600' : 'text-gray-800'
-                    }`}>
-                      {isDragActive ? 'Drop your image here' : 'Upload Plant Leaf Image'}
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      {translations.uploadTitle}
                     </h3>
-                    <p className={`text-gray-600 mb-4 transition-colors duration-300 ${
-                      isDragActive ? 'text-green-600' : ''
-                    }`}>
-                      {isDragActive ? 'Release to upload' : 'Drag and drop an image, or click to browse'}
+                    <p className="text-gray-600 mb-4">
+                      {translations.uploadSubtitle}
                     </p>
-                    <p className="text-sm text-gray-500">Supports JPG, PNG, WebP • Max size: 10MB</p>
+                    <button
+                      type="button"
+                      className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                    >
+                      {translations.uploadButton}
+                    </button>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {translations.orText}
+                    </p>
                   </div>
                 </div>
-
-                {/* Drag Active Overlay */}
-                {isDragActive && (
-                  <div className="absolute inset-0 bg-green-50/50 backdrop-blur-sm rounded-xl animate-pulse" />
-                )}
               </div>
             </div>
           )}
@@ -445,7 +469,7 @@ const PlantDiseaseUploader = () => {
                     {isAnalyzing ? (
                       <>
                         <Loader2 className="w-5 h-5 animate-spin" />
-                        Analyzing Plant...
+                        {translations.analyzing}
                       </>
                     ) : (
                       <>
@@ -517,17 +541,17 @@ const PlantDiseaseUploader = () => {
                   <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
                     <h3 className="text-lg font-semibold text-red-800 mb-3 flex items-center gap-2">
                       <AlertCircle className="w-5 h-5" />
-                      Disease Detected
+                      {translations.diseaseDetected}
                     </h3>
                     <p className="text-red-700 font-medium text-xl mb-2">{analysisResult.disease}</p>
                     <div className="flex items-center gap-4 text-sm">
-                      <span className="text-red-600">Confidence: {analysisResult.confidence}%</span>
-                      <span className="text-red-600">Severity: {analysisResult.severity}</span>
+                      <span className="text-red-600">{translations.confidence}: {analysisResult.confidence}%</span>
+                      <span className="text-red-600">{translations.severity}: {analysisResult.severity}</span>
                     </div>
                   </div>
 
                   <div className="p-6 bg-blue-50 border border-blue-200 rounded-xl">
-                    <h3 className="text-lg font-semibold text-blue-800 mb-4">Immediate Actions</h3>
+                    <h3 className="text-lg font-semibold text-blue-800 mb-4">{translations.immediateActions}</h3>
                     <ul className="space-y-3">
                       {analysisResult.recommendations.map((rec, index) => (
                         <li key={index} className="flex items-start gap-3">
@@ -564,7 +588,7 @@ const PlantDiseaseUploader = () => {
                   <MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">Plant Care Assistant</h3>
+                  <h3 className="text-xl font-bold text-gray-800">{translations.chatTitle}</h3>
                   <p className="text-gray-600 text-sm">Ask me anything about your plant's care and treatment</p>
                 </div>
               </div>
@@ -623,7 +647,7 @@ const PlantDiseaseUploader = () => {
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="Ask me about plant care, disease prevention, or treatment options..."
+                    placeholder={translations.chatPlaceholder}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     rows="2"
                     disabled={isChatLoading}
@@ -640,12 +664,12 @@ const PlantDiseaseUploader = () => {
 
               {/* Quick Question Suggestions */}
               <div className="mt-4 flex flex-wrap gap-2">
-                <p className="text-sm text-gray-500 w-full mb-2">Quick questions:</p>
+                <p className="text-sm text-gray-500 w-full mb-2">{translations.quickQuestions}</p>
                 {[
-                  "How often should I water my plant?",
-                  "What's the best fertilizer to use?",
-                  "How can I prevent this disease?",
-                  "When should I prune affected leaves?"
+                  translations.questions.watering,
+                  translations.questions.fertilizer,
+                  translations.questions.prevention,
+                  translations.questions.pruning
                 ].map((suggestion, index) => (
                   <button
                     key={index}

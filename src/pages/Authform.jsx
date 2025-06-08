@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react"
 import { Eye, EyeOff, Mail, Lock, User, Leaf } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { useLanguage } from '../context/LanguageContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true)
@@ -18,7 +20,44 @@ const AuthForm = () => {
   const [showForm, setShowForm] = useState(false)
   
   const nav = useNavigate()
-  
+  const { currentLanguage } = useLanguage();
+
+  // Translate all text content
+  const translations = {
+    title: useTranslation("GreenThumb"),
+    subtitle: useTranslation("Your Urban Gardening Companion"),
+    login: useTranslation("Login"),
+    signup: useTranslation("Sign Up"),
+    signIn: useTranslation("Sign In"),
+    createAccount: useTranslation("Create Account"),
+    signingIn: useTranslation("Signing In..."),
+    creatingAccount: useTranslation("Creating Account..."),
+    emailLabel: useTranslation("Email Address"),
+    emailPlaceholder: useTranslation("Enter your email"),
+    passwordLabel: useTranslation("Password"),
+    passwordPlaceholder: useTranslation("Enter your password"),
+    nameLabel: useTranslation("Full Name"),
+    namePlaceholder: useTranslation("Enter your full name"),
+    confirmPasswordLabel: useTranslation("Confirm Password"),
+    confirmPasswordPlaceholder: useTranslation("Confirm your password"),
+    noAccount: useTranslation("Don't have an account?"),
+    haveAccount: useTranslation("Already have an account?"),
+    signUpLink: useTranslation("Sign up"),
+    signInLink: useTranslation("Sign in"),
+    // Error messages
+    emailRequired: useTranslation("Email is required"),
+    emailInvalid: useTranslation("Please enter a valid email"),
+    passwordRequired: useTranslation("Password is required"),
+    passwordLength: useTranslation("Password must be at least 6 characters"),
+    nameRequired: useTranslation("Name is required"),
+    confirmPasswordRequired: useTranslation("Please confirm your password"),
+    passwordsMatch: useTranslation("Passwords do not match"),
+    loginSuccess: useTranslation("Login successful! Redirecting..."),
+    signupSuccess: useTranslation("Account created successfully! Redirecting..."),
+    loginError: useTranslation("Login failed. Please check your credentials."),
+    signupError: useTranslation("Signup failed. Please try again."),
+  };
+
   useEffect(() => {
     // Trigger entrance animations
     const timer1 = setTimeout(() => setIsVisible(true), 100)
@@ -51,28 +90,29 @@ const AuthForm = () => {
 
     // Email validation
     if (!formData.email) {
-      newErrors.email = "Email is required"
+      newErrors.email = translations.emailRequired
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email"
+      newErrors.email = translations.emailInvalid
     }
 
     // Password validation
     if (!formData.password) {
-      newErrors.password = "Password is required"
+      newErrors.password = translations.passwordRequired
     } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
+      newErrors.password = translations.passwordLength
     }
 
-    // Signup-specific validation
-    if (!isLogin) {
-      if (!formData.name.trim()) {
-        newErrors.name = "Name is required"
-      }
+    // Name validation (for signup)
+    if (!isLogin && !formData.name) {
+      newErrors.name = translations.nameRequired
+    }
 
+    // Confirm password validation (for signup)
+    if (!isLogin) {
       if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password"
+        newErrors.confirmPassword = translations.confirmPasswordRequired
       } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match"
+        newErrors.confirmPassword = translations.passwordsMatch
       }
     }
 
@@ -114,8 +154,8 @@ const AuthForm = () => {
 
         setErrors({ 
           general: isLogin 
-            ? "Login successful! Welcome back." 
-            : "Account created successfully!" 
+            ? translations.loginSuccess 
+            : translations.signupSuccess 
         })
         // Reset form on success
         setFormData({
@@ -127,12 +167,12 @@ const AuthForm = () => {
 
       } else {
         setErrors({
-          general: result.message || "An error occurred. Please try again.",
+          general: result.message || translations.loginError,
         })
       }
     } catch (error) {
       setErrors({
-        general: "Unable to connect to server. Please try again.",
+        general: translations.loginError,
       })
     } finally {
       setIsSubmitting(false)
@@ -188,10 +228,10 @@ const AuthForm = () => {
           }`}>
             <Leaf className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-green-700 mb-2 bg-gradient-to-r from-green-600 to-green-800 bg-clip-text ">
-            GreenThumb
+          <h1 className="text-3xl font-bold text-green-700 mb-2 bg-gradient-to-r from-green-600 to-green-800 bg-clip-text">
+            {translations.title}
           </h1>
-          <p className="text-gray-600 text-sm">Your Urban Gardening Companion</p>
+          <p className="text-gray-600 text-sm">{translations.subtitle}</p>
         </div>
 
         {/* Auth Card */}
@@ -217,7 +257,7 @@ const AuthForm = () => {
                   : "text-gray-500 hover:text-green-600"
               }`}
             >
-              Login
+              {translations.login}
             </button>
             <button
               onClick={() => setIsLogin(false)}
@@ -228,7 +268,7 @@ const AuthForm = () => {
                   : "text-gray-500 hover:text-green-600"
               }`}
             >
-              Sign Up
+              {translations.signup}
             </button>
           </div>
 
@@ -236,7 +276,7 @@ const AuthForm = () => {
           {errors.general && (
             <div
               className={`mb-4 p-3 rounded-lg text-sm transition-all duration-500 ease-out transform opacity-100 translate-y-0 ${
-                errors.general.includes("successful")
+                errors.general.includes(translations.loginSuccess)
                   ? "bg-green-100 text-green-700 border border-green-300"
                   : "bg-red-50 text-red-600 border border-red-200"
               }`}
@@ -261,7 +301,7 @@ const AuthForm = () => {
                   style={{ transitionDelay: '100ms' }}
                 >
                   <label htmlFor="name" className="block text-green-700 font-medium text-sm">
-                    Full Name
+                    {translations.nameLabel}
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
@@ -277,7 +317,7 @@ const AuthForm = () => {
                           ? "border-red-400 focus:border-red-400 focus:ring-red-200"
                           : "border-green-200 focus:border-green-500 focus:ring-green-200"
                       }`}
-                      placeholder="Enter your full name"
+                      placeholder={translations.namePlaceholder}
                     />
                   </div>
                   {errors.name && (
@@ -296,7 +336,7 @@ const AuthForm = () => {
                 style={{ transitionDelay: !isLogin ? '200ms' : '100ms' }}
               >
                 <label htmlFor="email" className="block text-green-700 font-medium text-sm">
-                  Email Address
+                  {translations.emailLabel}
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
@@ -312,7 +352,7 @@ const AuthForm = () => {
                         ? "border-red-400 focus:border-red-400 focus:ring-red-200"
                         : "border-green-200 focus:border-green-500 focus:ring-green-200"
                     }`}
-                    placeholder="Enter your email"
+                    placeholder={translations.emailPlaceholder}
                   />
                 </div>
                 {errors.email && (
@@ -330,7 +370,7 @@ const AuthForm = () => {
                 style={{ transitionDelay: !isLogin ? '300ms' : '200ms' }}
               >
                 <label htmlFor="password" className="block text-green-700 font-medium text-sm">
-                  Password
+                  {translations.passwordLabel}
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
@@ -346,15 +386,18 @@ const AuthForm = () => {
                         ? "border-red-400 focus:border-red-400 focus:ring-red-200"
                         : "border-green-200 focus:border-green-500 focus:ring-green-200"
                     }`}
-                    placeholder="Enter your password"
+                    placeholder={translations.passwordPlaceholder}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isSubmitting}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-green-500 transition-colors disabled:opacity-50"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
                   </button>
                 </div>
                 {errors.password && (
@@ -373,7 +416,7 @@ const AuthForm = () => {
                   style={{ transitionDelay: '400ms' }}
                 >
                   <label htmlFor="confirmPassword" className="block text-green-700 font-medium text-sm">
-                    Confirm Password
+                    {translations.confirmPasswordLabel}
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
@@ -389,15 +432,18 @@ const AuthForm = () => {
                           ? "border-red-400 focus:border-red-400 focus:ring-red-200"
                           : "border-green-200 focus:border-green-500 focus:ring-green-200"
                       }`}
-                      placeholder="Confirm your password"
+                      placeholder={translations.confirmPasswordPlaceholder}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      disabled={isSubmitting}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-green-500 transition-colors disabled:opacity-50"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
                     </button>
                   </div>
                   {errors.confirmPassword && (
@@ -443,12 +489,12 @@ const AuthForm = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    {isLogin ? "Signing In..." : "Creating Account..."}
+                    {isLogin ? translations.signingIn : translations.creatingAccount}
                   </>
                 ) : isLogin ? (
-                  "Sign In"
+                  translations.signIn
                 ) : (
-                  "Create Account"
+                  translations.createAccount
                 )}
               </button>
             </div>
@@ -462,14 +508,14 @@ const AuthForm = () => {
             style={{ transitionDelay: !isLogin ? '600ms' : '400ms' }}
           >
             <p className="text-sm text-gray-500">
-              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              {isLogin ? translations.noAccount : translations.haveAccount}{" "}
               <button
                 type="button"
                 onClick={toggleMode}
                 disabled={isSubmitting}
                 className="text-green-500 hover:text-green-700 font-medium transition-colors disabled:opacity-50 hover:underline"
               >
-                {isLogin ? "Sign up" : "Sign in"}
+                {isLogin ? translations.signUpLink : translations.signInLink}
               </button>
             </p>
           </div>

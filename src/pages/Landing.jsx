@@ -1,12 +1,26 @@
 import React, { useState } from "react";
-import { Leaf, Sprout, Sun, ArrowRight } from "lucide-react";
+import { Leaf, Sprout, Sun, ArrowRight, Globe } from "lucide-react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useLanguage, languages } from '../context/LanguageContext';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Landing() {
   const [buttonHovered, setButtonHovered] = useState(false);
+  const { currentLanguage, setCurrentLanguage } = useLanguage();
+  const nav = useNavigate();
 
-  const nav = useNavigate()
+  // Translate the text content
+  const title = useTranslation("PROJECT_TITLE");
+  const subtitle = useTranslation("Cultivate your urban oasis with AI-powered plant care");
+  const description = useTranslation("Transform any space into a thriving garden with personalized guidance, plant diagnosis, and smart growing tips.");
+  const startGrowing = useTranslation("Start Growing Today");
+  const joinText = useTranslation("Join thousands of urban gardeners • Free to get started");
+  const features = {
+    diagnosis: useTranslation("Smart Diagnosis"),
+    tracking: useTranslation("Growth Tracking"),
+    reminders: useTranslation("Care Reminders")
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -93,6 +107,44 @@ export default function Landing() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-white">
+      {/* Language Selector */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="absolute top-6 right-6 z-20"
+      >
+        <div className="relative group">
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm rounded-full shadow-lg border border-green-100 hover:border-green-200 transition-all duration-300"
+            onClick={() => document.getElementById('language-selector').classList.toggle('hidden')}
+          >
+            <Globe className="w-5 h-5 text-green-600" />
+            <span className="text-green-700 font-medium">{languages[currentLanguage].name}</span>
+          </button>
+          
+          <div
+            id="language-selector"
+            className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-green-100 hidden group-hover:block hover:block"
+          >
+            {Object.entries(languages).map(([code, { name }]) => (
+              <button
+                key={code}
+                onClick={() => {
+                  setCurrentLanguage(code);
+                  document.getElementById('language-selector').classList.add('hidden');
+                }}
+                className={`w-full px-4 py-2 text-left hover:bg-green-50 transition-colors ${
+                  currentLanguage === code ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-700'
+                } ${code === 'en' ? 'rounded-t-xl' : ''} ${code === 'kn' ? 'rounded-b-xl' : ''}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
       <motion.div
         className="relative z-10 flex flex-col items-center justify-center h-full max-w-5xl mx-auto px-6 text-center select-none"
         variants={containerVariants}
@@ -146,21 +198,21 @@ export default function Landing() {
             transition: { duration: 0.3 },
           }}
         >
-          PROJECT_TITLE
+          {title}
         </motion.h1>
 
         <motion.p
           variants={slideUpVariants}
           className="max-w-3xl mx-auto text-lg md:text-2xl text-gray-700 leading-relaxed mb-4"
         >
-          Cultivate your urban oasis with AI-powered plant care
+          {subtitle}
         </motion.p>
 
         <motion.p
           variants={slideUpVariants}
           className="max-w-2xl mx-auto text-base md:text-lg text-gray-500 mb-12"
         >
-          Transform any space into a thriving garden with personalized guidance, plant diagnosis, and smart growing tips.
+          {description}
         </motion.p>
 
         <motion.div
@@ -176,9 +228,9 @@ export default function Landing() {
           }}
         >
           {[
-            { icon: Sprout, label: "Smart Diagnosis" },
-            { icon: Sun, label: "Growth Tracking" },
-            { icon: Leaf, label: "Care Reminders" },
+            { icon: Sprout, label: features.diagnosis },
+            { icon: Sun, label: features.tracking },
+            { icon: Leaf, label: features.reminders },
           ].map(({ icon: Icon, label }) => (
             <motion.div
               key={label}
@@ -247,7 +299,7 @@ export default function Landing() {
               transition: { type: "spring", stiffness: 200 },
             }}
           >
-            Start Growing Today
+            {startGrowing}
             <motion.div
               animate={{
                 x: buttonHovered ? 8 : 0,
@@ -286,7 +338,7 @@ export default function Landing() {
           variants={slideUpVariants}
           className="text-sm text-gray-400"
         >
-          Join thousands of urban gardeners • Free to get started
+          {joinText}
         </motion.p>
       </motion.div>
 
