@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import { MessageCircle, Send, Heart, Search, Loader2, AlertCircle, Users } from 'lucide-react';
+import { MessageCircle, Send, Heart, Search, Loader2, AlertCircle, Users, Trash2, MoreVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
@@ -19,8 +19,10 @@ export default function Community() {
   const [hasMore, setHasMore] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
   const observer = useRef();
   const lastPostRef = useRef();
+  const [deleteConfirm, setDeleteConfirm] = useState({ postId: null, replyId: null });
 
   const particlesInit = useCallback(async (engine) => {
     await loadFull(engine);
@@ -81,11 +83,26 @@ export default function Community() {
     if (!newPost.trim()) return;
 
     try {
+      setLoading(true);
       const post = await communityService.createPost(userId, newPost.trim());
-      setPosts(prev => [post, ...prev]);
+      
+      // Fetch author details for the new post
+      const authorDetails = await communityService.getUserDetails(userId);
+      const postWithAuthor = {
+        ...post,
+        author: {
+          _id: userId,
+          name: authorDetails.name,
+          username: authorDetails.username
+        }
+      };
+
+      setPosts(prev => [postWithAuthor, ...prev]);
       setNewPost('');
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -94,15 +111,43 @@ export default function Community() {
     if (!replyContent[postId]?.trim()) return;
 
     try {
+      setLoading(true);
       const updatedPost = await communityService.addReply(
         postId,
         userId,
         replyContent[postId].trim()
       );
-      setPosts(prev => prev.map(p => p._id === postId ? updatedPost : p));
+
+      // Fetch author details for the new reply
+      const authorDetails = await communityService.getUserDetails(userId);
+      const updatedPostWithAuthor = {
+        ...updatedPost,
+        author: {
+          _id: updatedPost.author._id,
+          name: updatedPost.author.name,
+          username: updatedPost.author.username
+        },
+        replies: updatedPost.replies.map(reply => {
+          if (reply.author._id === userId) {
+            return {
+              ...reply,
+              author: {
+                _id: userId,
+                name: authorDetails.name,
+                username: authorDetails.username
+              }
+            };
+          }
+          return reply;
+        })
+      };
+
+      setPosts(prev => prev.map(p => p._id === postId ? updatedPostWithAuthor : p));
       setReplyContent(prev => ({ ...prev, [postId]: '' }));
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -145,10 +190,57 @@ export default function Community() {
     }
 
     try {
+      setSearchLoading(true);
+      setError(null);
       const results = await communityService.searchPosts(searchQuery.trim());
       setSearchResults(results);
     } catch (err) {
       setError(err.message);
+      setSearchResults(null);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Clear search
+  const handleClearSearch = () => {
+    setSearchQuery('');
+    setSearchResults(null);
+  };
+
+  // Delete post
+  const handleDeletePost = async (postId) => {
+    try {
+      setLoading(true);
+      await communityService.deletePost(postId);
+      setPosts(prev => prev.filter(p => p._id !== postId));
+      setDeleteConfirm({ postId: null, replyId: null });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Delete reply
+  const handleDeleteReply = async (postId, replyId) => {
+    try {
+      setLoading(true);
+      await communityService.deleteReply(postId, replyId);
+      setPosts(prev => prev.map(post => {
+        if (post._id === postId) {
+          return {
+            ...post,
+            replies: post.replies.filter(reply => reply._id !== replyId)
+          };
+        }
+        return post;
+      }));
+      setDeleteConfirm({ postId: null, replyId: null });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -316,21 +408,64 @@ export default function Community() {
           transition={{ duration: 0.5 }}
         >
           <div className="flex gap-2">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search posts..."
-              className="flex-1 p-3 border border-gray-200 rounded-xl bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search posts..."
+                className="w-full p-3 pl-10 border border-gray-200 rounded-xl bg-white/90 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              )}
+            </div>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors"
+              disabled={searchLoading}
+              className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <Search size={20} />
+              {searchLoading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <Search size={20} />
+                  <span>Search</span>
+                </>
+              )}
             </button>
           </div>
         </motion.form>
+
+        {/* Search Results Header */}
+        {searchResults && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 flex items-center justify-between"
+          >
+            <h2 className="text-lg font-semibold text-gray-800">
+              Search Results for "{searchQuery}"
+            </h2>
+            <button
+              onClick={handleClearSearch}
+              className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+            >
+              <span>Clear search</span>
+              ×
+            </button>
+          </motion.div>
+        )}
 
         {/* New Post Form */}
         <motion.form 
@@ -398,9 +533,21 @@ export default function Community() {
                       <span className="text-gray-500 text-sm">@{post.author.username}</span>
                     </div>
                   </div>
-                  <span className="text-gray-500 text-sm">
-                    {formatTimestamp(post.timestamp)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 text-sm">
+                      {formatTimestamp(post.timestamp)}
+                    </span>
+                    {post.author._id === userId && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setDeleteConfirm({ postId: post._id, replyId: null })}
+                          className="p-1 hover:bg-red-50 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Post Content */}
@@ -486,9 +633,19 @@ export default function Community() {
                               <span className="text-gray-500 text-sm">@{reply.author.username}</span>
                             </div>
                           </div>
-                          <span className="text-gray-500 text-sm">
-                            {formatTimestamp(reply.timestamp)}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-sm">
+                              {formatTimestamp(reply.timestamp)}
+                            </span>
+                            {reply.author._id === userId && (
+                              <button
+                                onClick={() => setDeleteConfirm({ postId: post._id, replyId: reply._id })}
+                                className="p-1 hover:bg-red-50 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         <p className="mb-2 text-gray-700">{reply.content}</p>
                         <button
@@ -508,6 +665,52 @@ export default function Community() {
                 )}
               </motion.div>
             ))}
+          </AnimatePresence>
+
+          {/* Delete Confirmation Modal */}
+          <AnimatePresence>
+            {(deleteConfirm.postId || deleteConfirm.replyId) && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+              >
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.95, opacity: 0 }}
+                  className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-xl"
+                >
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {deleteConfirm.replyId ? 'Delete Reply' : 'Delete Post'}
+                  </h3>
+                  <p className="text-gray-600 mb-6">
+                    Are you sure you want to delete this {deleteConfirm.replyId ? 'reply' : 'post'}? This action cannot be undone.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteConfirm({ postId: null, replyId: null })}
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (deleteConfirm.replyId) {
+                          handleDeleteReply(deleteConfirm.postId, deleteConfirm.replyId);
+                        } else {
+                          handleDeletePost(deleteConfirm.postId);
+                        }
+                      }}
+                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Loading Indicator */}

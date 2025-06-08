@@ -47,7 +47,6 @@ const communitySchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-communitySchema.index({ name: 1 });
 communitySchema.index({ category: 1 });
 communitySchema.index({ tags: 1 });
 

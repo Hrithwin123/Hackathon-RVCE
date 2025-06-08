@@ -100,6 +100,55 @@ export const communityService = {
 
   searchPosts: async (query) => {
     const response = await fetch(`${API_URL}/posts/search?query=${encodeURIComponent(query)}`);
+    const posts = await handleResponse(response);
+    
+    // Fetch author details for each post and its replies
+    const postsWithAuthors = await Promise.all(
+      posts.map(async (post) => {
+        // Get post author details
+        const authorDetails = await communityService.getUserDetails(post.author._id);
+        
+        // Get reply author details
+        const repliesWithAuthors = await Promise.all(
+          post.replies.map(async (reply) => {
+            const replyAuthorDetails = await communityService.getUserDetails(reply.author._id);
+            return {
+              ...reply,
+              author: {
+                ...reply.author,
+                name: replyAuthorDetails.name,
+                username: replyAuthorDetails.username
+              }
+            };
+          })
+        );
+
+        return {
+          ...post,
+          author: {
+            ...post.author,
+            name: authorDetails.name,
+            username: authorDetails.username
+          },
+          replies: repliesWithAuthors
+        };
+      })
+    );
+
+    return postsWithAuthors;
+  },
+
+  deletePost: async (postId) => {
+    const response = await fetch(`${API_URL}/posts/${postId}`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response);
+  },
+
+  deleteReply: async (postId, replyId) => {
+    const response = await fetch(`${API_URL}/posts/${postId}/replies/${replyId}`, {
+      method: 'DELETE',
+    });
     return handleResponse(response);
   }
 }; 

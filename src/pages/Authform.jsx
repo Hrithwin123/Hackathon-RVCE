@@ -93,7 +93,7 @@ const AuthForm = () => {
       : { name: formData.name, email: formData.email, password: formData.password }
 
     try {
-      const response = await fetch('http://localhost:3000/auth', {
+      const response = await fetch('http://localhost:5000/api/auth/auth', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

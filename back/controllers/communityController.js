@@ -194,4 +194,55 @@ export const getUserDetails = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+};
+
+// Delete post
+export const deletePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const post = await Post.findById(postId);
+    
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Optional: Add authorization check here if needed
+    // if (post.author.toString() !== req.user._id.toString()) {
+    //   return res.status(403).json({ message: 'Not authorized to delete this post' });
+    // }
+
+    await Post.findByIdAndDelete(postId);
+    res.json({ message: 'Post deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Delete reply
+export const deleteReply = async (req, res) => {
+  try {
+    const { postId, replyId } = req.params;
+    const post = await Post.findById(postId);
+    
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    const reply = post.replies.id(replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    // Optional: Add authorization check here if needed
+    // if (reply.author.toString() !== req.user._id.toString()) {
+    //   return res.status(403).json({ message: 'Not authorized to delete this reply' });
+    // }
+
+    post.replies.pull(replyId);
+    await post.save();
+    
+    res.json({ message: 'Reply deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 }; 
